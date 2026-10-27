@@ -4324,6 +4324,8 @@ if (Ipred_pu > ImaxF) {
                 breakpoints = 7276, 7420; 7276, 7312
             ]
 
+            mp = "0.05"
+
             mask {
                 description = "<p><b>REGFM_A1 droop-controlled grid-forming (GFM) inverter</b> – average-value model of the REGFM_A1 generic grid-forming inverter specified in [1]. The inverter behaves as a voltage source with its own internal frequency and voltage, like a synchronous machine.</p><p><b>Power stage:</b> an ideal three-phase signal-controlled voltage source (the internal EMF) behind the coupling impedance Rc + jXL, connected to the grid at terminals A, B, C. Every Ts the controller measures the terminal voltage and current and sets the magnitude and angle of the EMF.</p><p><b>Control (graphical subsystem REGFM_A1_CTRL):</b></p><ul><li><b>P–f droop</b> (mp): active power sets the internal frequency f_drp and hence the EMF angle; P is limited to Pmin…Pmax by overload-mitigation PI loops (kppmax, kipmax).</li><li><b>Q–V droop</b> (mq): reactive power lowers the voltage reference; VFlag = 1 adds a voltage PI loop (kpv, kiv, output limited to Emin…Emax), VFlag = 0 applies the droop-modified reference directly. Q is limited to Qmin…Qmax by PI loops (kpqmax, kiqmax).</li><li><b>Current limiting:</b> the transient current is limited to ImaxF (Eq. (7) and Fig. 4 of [1]).</li><li>P, Q and V measurements are filtered with time constants TPf, TQf and TVf.</li></ul><p><b>Inputs</b> (per unit on Sbase and Vbase_LL): <b>Pref</b> and <b>Qref</b> – active and reactive power set points; <b>Vref</b> – voltage set point.</p><p><b>Parameters:</b> rated power Sbase [VA], rated line-to-line voltage Vbase_LL [V rms], rated frequency f0 [Hz], the controller gains and limits of Table 1 of [1] (all in pu), and the execution rate Ts [s] of the controller and of its measurements.</p><p><b>Main signals:</b> Pf_pu, Qf_pu – filtered P and Q [pu]; f_drp – internal frequency [Hz]; V_pu, I_pu – terminal voltage and current [pu]; E_pu – internal EMF [pu]; lim_on – current limiter active.</p><p><b>Reference</b><br></br>[1] W. Du <i>et al.</i>, <i>Model Specification of Droop-Controlled, Grid-Forming Inverters (REGFM_A1)</i>, Pacific Northwest National Laboratory, Richland, WA, USA, Rep. PNNL-32278, Sep. 2023.</p>"
 
@@ -4944,7 +4946,7 @@ double f_mult = (t_sim >= Tstep) ? Fstep_pu : 1.0;
 out[0] = Vphase_base * v_mult;
 out[1] = f0 * f_mult;
 /*End code section*/"
-                output_terminals_dimensions = "2"
+                output_terminals_dimensions = "(2,)"
                 output_terminals_feedthrough = "True"
                 output_terminals_show_labels = "False"
                 update_fnc = "/*Begin code section*/

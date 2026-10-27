@@ -26,7 +26,7 @@ Both models use the same subsystem, called **GFM Inverter**: an **average-value*
 
 > W. Du et al., *Model Specification of Droop-Controlled, Grid-Forming Inverters (REGFM_A1)*, Pacific Northwest National Laboratory, PNNL-32278. https://www.osti.gov/servlets/purl/2229442
 
-The controller parameters are the PNNL validation set (Table 1 of the report).
+The controller parameters are the PNNL validation set (Table 1 of the report), with one change: the P–f droop gain `mp` is set to **0.05** (the upper end of the report's normal range of 0.005–0.05 pu) instead of the validation value 0.01. The mask's default for `mp` is still 0.01; the value 0.05 is set on each inverter instance in the models.
 
 ### What "grid-forming" means here
 
@@ -60,7 +60,7 @@ Q ≈ (E·V·cos δ − V²) / X
 For a small angle, **P follows the angle δ and Q follows the voltage difference E − V**. The angle is the integral of frequency, so an inverter changes P by temporarily changing its frequency, and Q by changing its voltage. The two droop laws build this into the controller (per unit):
 
 ```
-P–f droop:   (f − f0)/f0 = mp · (Pref − P)        mp = 0.01  →  1 pu of power moves frequency by 1 % (0.6 Hz)
+P–f droop:   (f − f0)/f0 = mp · (Pref − P)        mp = 0.05  →  1 pu of power moves frequency by 5 % (3 Hz)
 Q–V droop:   V = Vref − mq · (Q − Qref)           mq = 0.05  →  1 pu of reactive power moves voltage by 5 %
 ```
 
@@ -82,7 +82,7 @@ The controller runs every `Ts` = 100 µs; measurements, angle, EMF waveforms and
 
 | Parameter | Value | Meaning |
 |---|---|---|
-| `mp` | 0.01 | P–f droop gain |
+| `mp` | **0.05** (mask default 0.01) | P–f droop gain |
 | `mq` | 0.05 | Q–V droop gain |
 | `Pmax` / `Pmin` | 0.9 / 0 | Active-power band for overload mitigation (pu) |
 | `Qmax` / `Qmin` | 0.44 / −0.44 | Reactive-power band (pu) |
@@ -133,7 +133,7 @@ Disturbances happen at **t = 3 s**. Change these settings, then run:
 | Scenario | `Grid › ScenDrv` init code | `FaultTF_c` / `FaultTFend_c` |
 |---|---|---|
 | Frequency step, 60 → 59.85 Hz | `Vstep_pu = 1; Fstep_pu = 0.9975; Tstep = 3.0;` | 100 / 100.5 (fault off) |
-| Frequency step, 60 → 59.7 Hz | `Fstep_pu = 0.995` | 100 / 100.5 |
+| Frequency step, 60 → 58.8 Hz | `Fstep_pu = 0.98` | 100 / 100.5 |
 | Voltage step, 1.0 → 0.98 pu | `Vstep_pu = 0.98; Fstep_pu = 1; Tstep = 3.0;` | 100 / 100.5 |
 | Three-phase-to-ground fault, 3.0–3.5 s | `Vstep_pu = 1; Fstep_pu = 1;` | 3 / 3.5 |
 | No disturbance (start-up only) | `Vstep_pu = 1; Fstep_pu = 1;` | 100 / 100.5 |
@@ -144,11 +144,13 @@ Disturbances happen at **t = 3 s**. Change these settings, then run:
 
 | Scenario | Prediction | Result in TyphoonSim |
 |---|---|---|
-| Start-up | The inverter pulls itself into synchronism through the droop, with no PLL | P reaches Pref = 0.6 pu within ±2 % after ≈ 0.17 s; f = 60 Hz |
-| Frequency step to 59.85 Hz | P = Pref + (f0 − f_grid)/(mp·f0) = 0.6 + 0.15/0.6 | **P = 0.850 pu**; the inverter follows the grid at 59.85 Hz |
-| Frequency step to 59.7 Hz | The droop asks for 1.1 pu, above Pmax | **P held at Pmax = 0.900 pu** by the overload loop |
+| Start-up | The inverter pulls itself into synchronism through the droop, with no PLL | P reaches Pref = 0.6 pu within ±2 % after ≈ 0.06 s (with an overshoot to ≈ 0.69 pu); f = 60 Hz |
+| Frequency step to 59.85 Hz | P = Pref + (f0 − f_grid)/(mp·f0) = 0.6 + 0.15/3.0 | **P = 0.650 pu**; the inverter follows the grid at 59.85 Hz |
+| Frequency step to 58.8 Hz | The droop asks for 0.6 + 1.2/3.0 = 1.0 pu, above Pmax | The overload loop pulls P down towards **Pmax = 0.900 pu**; it is a slow loop, so P is still 0.903 pu at the end of the 5 s run (0.975 pu 0.1 s after the step) |
 | Voltage step to 0.98 pu | V = Vref − mq·Q, so the inverter injects Q | **Q ≈ 0.255 pu**, terminal V ≈ 0.987 pu (the grid fell 0.020 pu, the terminal only 0.013 pu); P stays 0.600 pu |
-| Fault, 3.0–3.5 s | Voltage collapses; the limiter holds the current near ImaxF | V ≈ 0.02 pu, \|I\| held at **≈ 1.99 pu** (first-cycle peak ≈ 3.1 pu); the internal frequency rises to ≈ 60.35 Hz because P ≈ 0, so the angle runs ahead of the grid; after clearing P peaks at ≈ 2.05 pu, the frequency dips to ≈ 57.9 Hz, and P is back within 2 % of Pref by ≈ 3.8 s |
+| Fault, 3.0–3.5 s | Voltage collapses; the limiter holds the current near ImaxF | V ≈ 0.02 pu, \|I\| held at **≈ 1.94 pu** (first-cycle peak ≈ 3.1 pu); the held value is a little below `ImaxF` because the limiter assumes `XL` at 60 Hz while the inverter now runs at ≈ 61.8 Hz. With P ≈ 0 the droop raises the internal frequency to 60·(1 + 0.05·0.6) = **61.8 Hz**, so the EMF angle runs ahead of the grid by **≈ 320°** (from 6° to 327°), almost a full cycle, during the 0.5 s fault. After clearing, \|I\| peaks at ≈ 3.1 pu for a few milliseconds, P peaks at ≈ 1.15 pu, the frequency swings between ≈ 58 and ≈ 67 Hz, and the inverter **re-synchronises one full cycle ahead** (angle 366° = 6° + 360°, a pole slip). P is back within 2 % of Pref by ≈ 3.6 s |
+
+With `mp` = 0.05 the margin in the fault case is small: the angle is only ≈ 33° short of a full cycle when the fault clears. Change the fault duration (`FaultTFend_c`) to explore how the recovery depends on it; other durations have not been tested.
 
 ---
 
@@ -172,20 +174,20 @@ With no stiff grid, the droop lines alone decide the frequency. Both inverters r
 | | P1 (Pref 0.6) | P2 (Pref 0.3) | Frequency |
 |---|---|---|---|
 | Before the step (t < 3 s) | 0.600 pu | 0.300 pu | 60.00 Hz |
-| After +30 kW (0.3 pu) | **0.750 pu** | **0.450 pu** | **59.91 Hz** (= 60 − 0.6 · 0.15) |
+| After +30 kW (0.3 pu) | **0.750 pu** | **0.450 pu** | **59.55 Hz** (= 60 − 3.0 · 0.15) |
 
-Exercise: set `mp = 0.02` on the **GFM Inverter2** mask. Inverter 1 now takes two thirds of the step: ΔP1 = 0.20 pu, ΔP2 = 0.10 pu, f = 59.88 Hz. **The droop gain, not the rating or the set point, decides how a load change is shared.**
+Exercise: set `mp = 0.10` on the **GFM Inverter2** instance (inverter 1 keeps 0.05). Inverter 1 now takes two thirds of the step: ΔP1 = 0.20 pu, ΔP2 = 0.10 pu, f = 59.40 Hz. **The droop gain, not the rating or the set point, decides how a load change is shared.**
 
-The model-initialisation code of `two_gfm.tse` prints the predicted post-step frequency (`f = 60·(1 + 0.01·(Pref − P))` with P = 0.75) to the console when the model is loaded.
+The model-initialisation code of `two_gfm.tse` prints the predicted post-step frequency (`f = 60·(1 + mp·(Pref − P))` with `mp` = 0.05 and P = 0.75, i.e. 59.55 Hz) to the console when the model is loaded.
 
 ---
 
 ## Notes and limitations
 
 - **Average-value inverter.** No PWM or DC link, so there is no converter-level behaviour such as modulation saturation. After a fault clears, the internal EMF `E_pu` can briefly exceed `Emax` (it is not capped), so treat the first ~150 ms after clearing as indicative.
-- **The current limiter predicts the current; it does not measure it.** It holds the AC fault current near `ImaxF`, but the coupling inductor also carries a **DC-offset current** at fault inception that the limiter cannot see. That is why the current briefly overshoots `ImaxF` in the first cycle (≈ 3 pu) and just after clearing (≈ 2.2 pu). The coupling resistance `Rc` is what damps that offset (time constant ≈ XL/(ω·Rc) ≈ 13 ms); with `Rc_pu = 0` the offset almost never decays and the current swings at 60 Hz.
+- **The current limiter predicts the current; it does not measure it.** It holds the AC fault current near `ImaxF`, but the coupling inductor also carries a **DC-offset current** at fault inception that the limiter cannot see. That is why the current briefly overshoots `ImaxF` in the first cycle (≈ 3 pu) and just after clearing (≈ 3 pu with `mp` = 0.05). The coupling resistance `Rc` is what damps that offset (time constant ≈ XL/(ω·Rc) ≈ 13 ms); with `Rc_pu = 0` the offset almost never decays and the current swings at 60 Hz.
 - **Frequency does not return to nominal** after a disturbance in `two_gfm.tse`: droop provides *primary* control only.
-- **Droop in this controller is stiff** (`mp` = 1 %): 1 pu of power moves the frequency by only 0.6 Hz. Typical synchronous-machine governor droop is larger.
+- **Droop gain.** `mp` = 5 %: 1 pu of power moves the frequency by 3 Hz. That is the upper end of the PNNL normal range (0.005–0.05) and in line with typical synchronous-machine governor droop of 4–5 %. A larger `mp` gives a larger frequency deviation for the same power change, and a larger angle excursion during a fault.
 - The grid in `siib.tse` is very stiff (SCR = 40). Weaker grids change both the droop response and the post-fault angle swing; try raising `Lg` in the `Grid` subsystem.
 
 ## Reference
