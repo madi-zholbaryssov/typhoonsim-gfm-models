@@ -1,14 +1,13 @@
-# TyphoonSim models: RLC circuit and grid-forming inverter (REGFM_A1)
+# TyphoonSim models: grid-forming inverter (REGFM_A1)
 
-Three small Typhoon HIL Schematic Editor models for learning TyphoonSim (the offline simulator) and for studying how a **grid-forming (GFM) inverter** behaves.
+Two small Typhoon HIL Schematic Editor models for studying how a **grid-forming (GFM) inverter** behaves in TyphoonSim (the offline simulator).
 
 | File | What it is |
 |---|---|
-| `rlc_circuit.tse` | Series source resistance feeding an L ‖ (R + C) tank. A first model for learning the TyphoonSim settings. |
 | `siib.tse` | **S**ingle **I**nverter on an **I**nfinite **B**us: one droop-controlled GFM inverter connected to a stiff grid. Frequency step, voltage step and fault scenarios. |
 | `two_gfm.tse` | The infinite bus replaced by a **second** GFM inverter, with a constant-impedance load and a load step. Shows droop power sharing without a stiff grid. |
 
-All models were saved with Typhoon HIL Control Center **2026.4** (development build) and are meant to run in **TyphoonSim**. No hardware is needed.
+All models are meant to run in **TyphoonSim**. No hardware is needed.
 
 ---
 
@@ -17,15 +16,7 @@ All models were saved with Typhoon HIL Control Center **2026.4** (development bu
 1. Open the `.tse` file in the Schematic Editor.
 2. Start the TyphoonSim simulation. All settings are stored in the model:
    - Solver **ODE**, integration method **BDF**, max step 1e-5 s, tolerances 1e-3, simulation time 5 s, data sampling rate **1e-4 s** (the sampling rate is in *seconds*).
-3. Results appear in the model's scopes. A 5 s run of `siib.tse` or `two_gfm.tse` takes about 30–50 s on a laptop.
-
----
-
-## rlc_circuit.tse
-
-An ideal 350 V rms, 3 kHz sine source feeds, through `Rin` = 5 Ω, a parallel tank: `L` = 10 µH in parallel with `R` = 0.1 Ω in series with `C` = 500 µF. `I` is the source current and `Va1` the tank voltage; `Scope1` records both. It is the shipped Typhoon HIL example "rlc circuit typhoonsim", unchanged apart from its name.
-
-The steady state can be solved with phasors (tank impedance 0.2121 Ω at 3.8°, giving **67.16 A rms** and **14.24 V rms**), so the model checks that TyphoonSim agrees with a hand calculation. Its settings (DAE solver, BDF, data sampling rate 0) are a good starting point for discussing what each TyphoonSim option does.
+3. Results appear in the model's scopes.
 
 ---
 
